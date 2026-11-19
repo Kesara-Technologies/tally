@@ -122,6 +122,7 @@ class _TransactionsViewState extends State<TransactionsView> {
       (groups[key] ??= []).add(entry);
     }
     final sections = groups.entries.toList();
+    final colors = Theme.of(context).colorScheme;
     final content = Column(
       children: [
         if (widget.accountId == null)
@@ -194,15 +195,15 @@ class _TransactionsViewState extends State<TransactionsView> {
                             onPressed: () => _openFilters(),
                             style: IconButton.styleFrom(
                               backgroundColor: _filters.active
-                                  ? Palette.greenSurface
-                                  : Palette.surface,
+                                  ? colors.primaryContainer
+                                  : colors.surfaceContainer,
                               foregroundColor: _filters.active
-                                  ? Palette.mint
-                                  : Palette.secondary,
+                                  ? colors.onPrimaryContainer
+                                  : colors.onSurfaceVariant,
                               padding: EdgeInsets.zero,
-                              minimumSize: const Size.square(40),
+                              minimumSize: const Size.square(44),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(11),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
                             icon: const Icon(Icons.tune_rounded, size: 20),
@@ -306,42 +307,22 @@ class _CashFlowCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = ledger.now;
     final flow = ledger.monthlyCashFlow(now);
+    final colors = Theme.of(context).colorScheme;
     final net = flow.income - flow.expenses;
 
     return Surface(
-      color: Palette.greenSurface,
-      border: Palette.greenLine,
-      radius: 20,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 13),
+      color: Theme.of(context).colorScheme.secondaryContainer,
+      radius: 30,
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.calendar_today_outlined,
-                size: 13,
-                color: Palette.mint,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  monthLabel(now),
-                  style: textStyle(
-                    12,
-                    weight: FontWeight.w700,
-                    color: Palette.mint,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.insights_outlined,
-                size: 17,
-                color: Palette.mint,
-              ),
-            ],
+          SummaryHeading(
+            monthLabel(now),
+            Icons.insights_outlined,
+            colors.onSecondaryContainer,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 5),
           Row(
             children: [
               Expanded(
@@ -351,7 +332,7 @@ class _CashFlowCard extends StatelessWidget {
                   children: [
                     MoneyText(
                       net,
-                      size: 34,
+                      size: 42,
                       plus: true,
                       weight: FontWeight.w900,
                       fit: true,
@@ -364,16 +345,22 @@ class _CashFlowCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (flow.income > 0 || flow.expenses > 0)
+              if (flow.income > 0 || flow.expenses > 0) ...[
+                const SizedBox(width: 8),
                 Expanded(
                   flex: 3,
-                  child: SizedBox(height: 43, child: Sparkline(flow.trend)),
+                  child: SizedBox(
+                    height: 48,
+                    child: Sparkline(
+                      flow.trend,
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
                 ),
+              ],
             ],
           ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Palette.greenLine),
-          const SizedBox(height: 11),
+          const SizedBox(height: 15),
           Row(
             children: [
               Expanded(
@@ -383,8 +370,7 @@ class _CashFlowCard extends StatelessWidget {
                   EntryType.income,
                 ),
               ),
-              Container(width: 1, height: 31, color: Palette.greenLine),
-              const SizedBox(width: 13),
+              const SizedBox(width: 8),
               Expanded(
                 child: _CashMetric(
                   'Expenses',
@@ -407,27 +393,30 @@ class _CashMetric extends StatelessWidget {
   final EntryType type;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Glyph(
-        typeIcon(type),
-        typeColour(type),
-        size: 31,
-        radius: 9,
-        iconSize: 15,
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: textStyle(10, color: Palette.secondary)),
-            const SizedBox(height: 2),
-            MoneyText(amount, size: 14, color: typeColour(type), fit: true),
-          ],
+  Widget build(BuildContext context) => Surface(
+    color: Color.alphaBlend(
+      Theme.of(context).colorScheme.surfaceContainerLowest
+          .withValues(alpha: .29),
+      Theme.of(context).colorScheme.secondaryContainer,
+    ),
+    radius: 18,
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    child: Row(
+      children: [
+        Icon(typeIcon(type), color: typeColour(type), size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: textStyle(11, color: Palette.secondary)),
+              const SizedBox(height: 2),
+              MoneyText(amount, size: 15, color: typeColour(type), fit: true),
+            ],
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 }
 
@@ -439,7 +428,7 @@ class TransactionGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Surface(
     padding: EdgeInsets.zero,
-    radius: 15,
+    radius: 23,
     child: Column(
       children: [
         for (final (index, entry) in entries.indexed) ...[
@@ -473,7 +462,7 @@ class TransactionTile extends StatelessWidget {
     return InkWell(
       onTap: () => openPage<void>(context, TransactionDetails(id: entry.id)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
         child: Row(
           children: [
             Glyph(visual.icon, visual.color, size: 40, iconSize: 20),
@@ -589,8 +578,8 @@ class _TransactionDetailsState extends State<TransactionDetails> {
       child: PageScroll(
         children: [
           Surface(
-            color: Palette.greenSurface,
-            border: Palette.greenLine,
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            radius: 30,
             child: Column(
               children: [
                 Glyph(

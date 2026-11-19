@@ -108,9 +108,9 @@ class _BudgetFormState extends State<BudgetForm> {
                         'Overall spending limit',
                         style: textStyle(14, weight: FontWeight.w700),
                       ),
-                      secondary: const Icon(
+                      secondary: Icon(
                         Icons.track_changes_rounded,
-                        color: Palette.mint,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 20,
                       ),
                     ),
@@ -122,9 +122,9 @@ class _BudgetFormState extends State<BudgetForm> {
                         'Category spending limit',
                         style: textStyle(14, weight: FontWeight.w700),
                       ),
-                      secondary: const Icon(
+                      secondary: Icon(
                         Icons.category_outlined,
-                        color: Palette.mint,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 20,
                       ),
                     ),
@@ -178,10 +178,10 @@ class _BudgetFormState extends State<BudgetForm> {
             SelectField(
               label: 'Budget Period',
               value: _period.label,
-              leading: const Icon(
+              leading: Icon(
                 Icons.calendar_today_outlined,
                 size: 18,
-                color: Palette.mint,
+                color: Theme.of(context).colorScheme.primary,
               ),
               onTap: _saving
                   ? null
@@ -198,13 +198,12 @@ class _BudgetFormState extends State<BudgetForm> {
             ),
             const SizedBox(height: 17),
             Surface(
-              color: Palette.greenSurface,
-              border: Palette.greenLine,
+              color: Theme.of(context).colorScheme.tertiaryContainer,
               child: Row(
                 children: [
-                  const Glyph(
+                  Glyph(
                     Icons.track_changes_rounded,
-                    Palette.mint,
+                    Theme.of(context).colorScheme.primary,
                     size: 37,
                     iconSize: 20,
                   ),
@@ -322,7 +321,10 @@ class BudgetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final category = budget.category;
     final visual = category == null
-        ? (icon: Icons.track_changes_rounded, color: Palette.mint)
+        ? (
+            icon: Icons.track_changes_rounded,
+            color: Theme.of(context).colorScheme.primary,
+          )
         : categoryVisual(category);
     final hidden = LedgerScope.of(context).hidden;
     return Surface(
@@ -498,15 +500,17 @@ class _BudgetDetailsState extends State<BudgetDetails> {
     final lastDay = DateTime(span.end.year, span.end.month, span.end.day - 1);
     final category = budget.category;
     final visual = category == null
-        ? (icon: Icons.track_changes_rounded, color: Palette.mint)
+        ? (
+            icon: Icons.track_changes_rounded,
+            color: Theme.of(context).colorScheme.primary,
+          )
         : categoryVisual(category);
     return Subpage(
       title: 'Budget details',
       child: PageScroll(
         children: [
           Surface(
-            color: Palette.greenSurface,
-            border: Palette.greenLine,
+            color: Theme.of(context).colorScheme.tertiaryContainer,
             child: Column(
               children: [
                 Glyph(visual.icon, visual.color, size: 51, iconSize: 25),

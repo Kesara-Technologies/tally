@@ -18,8 +18,11 @@ abstract final class Palette {
   static const transfer = Color(0xFF91BFFA);
   static const amber = Color(0xFFE5B479);
   static const line = Color(0xFF3A434F);
-  static const greenSurface = Color(0xFF213731);
-  static const greenLine = Color(0xFF365047);
+  static const cashSurface = Color(0xFF233945);
+  static const cashAccent = Color(0xFFAFE4F4);
+  static const balanceSurface = Color(0xFF284737);
+  static const analysisSurface = Color(0xFF38334E);
+  static const analysisAccent = Color(0xFFE1D7FF);
   static const purple = Color(0xFFB2A6F7);
   static const pink = Color(0xFFF1A8C0);
 }
@@ -40,90 +43,150 @@ TextStyle textStyle(
   fontFeatures: tabular ? const [FontFeature.tabularFigures()] : null,
 );
 
-ThemeData tallyTheme() {
+ThemeData tallyTheme({Color? seedColor}) {
+  final colors = seedColor == null
+      ? const ColorScheme.dark(
+          surface: Palette.background,
+          surfaceContainerLowest: Palette.base,
+          surfaceContainer: Palette.surface,
+          surfaceContainerHigh: Palette.raised,
+          primary: Palette.mint,
+          onPrimary: Palette.base,
+          primaryContainer: Palette.balanceSurface,
+          onPrimaryContainer: Palette.mint,
+          secondary: Palette.cashAccent,
+          secondaryContainer: Palette.cashSurface,
+          onSecondaryContainer: Palette.cashAccent,
+          tertiary: Palette.analysisAccent,
+          tertiaryContainer: Palette.analysisSurface,
+          onTertiaryContainer: Palette.analysisAccent,
+          error: Palette.expense,
+          onSurface: Palette.text,
+          onSurfaceVariant: Palette.secondary,
+          outline: Palette.line,
+          outlineVariant: Palette.line,
+        )
+      : ColorScheme.fromSeed(
+          seedColor: seedColor,
+          brightness: Brightness.dark,
+          error: Palette.expense,
+          onError: Palette.base,
+        );
   final theme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     fontFamily: 'Lato',
-    scaffoldBackgroundColor: Palette.background,
-    colorScheme: const ColorScheme.dark(
-      surface: Palette.surface,
-      primary: Palette.mint,
-      onPrimary: Palette.base,
-      secondary: Palette.transfer,
-      error: Palette.expense,
-      onSurface: Palette.text,
-      onSurfaceVariant: Palette.secondary,
-      outline: Palette.line,
-    ),
-    dividerColor: Palette.line,
+    scaffoldBackgroundColor: colors.surface,
+    colorScheme: colors,
+    dividerColor: colors.outlineVariant,
     splashFactory: InkRipple.splashFactory,
   );
-  final rounded = BorderRadius.circular(12);
-  OutlineInputBorder border(Color color) => OutlineInputBorder(
-    borderRadius: rounded,
-    borderSide: BorderSide(color: color),
-  );
+  final rounded = BorderRadius.circular(16);
+  OutlineInputBorder border(Color color, {double width = 1}) =>
+      OutlineInputBorder(
+        borderRadius: rounded,
+        borderSide: BorderSide(color: color, width: width),
+      );
   return theme.copyWith(
-    dividerTheme: const DividerThemeData(color: Palette.line, thickness: 1),
+    dividerTheme: DividerThemeData(color: colors.outlineVariant, thickness: 1),
     textTheme: theme.textTheme.apply(
       bodyColor: Palette.text,
       displayColor: Palette.text,
     ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Palette.background,
+    appBarTheme: AppBarTheme(
+      backgroundColor: colors.surface,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
       systemOverlayStyle: SystemUiOverlayStyle.light,
     ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: colors.surfaceContainerLowest,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      height: 68,
+      indicatorColor: colors.primaryContainer,
+      indicatorShape: const StadiumBorder(),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => textStyle(
+          11,
+          color: states.contains(WidgetState.selected)
+              ? colors.onPrimaryContainer
+              : colors.onSurfaceVariant,
+          weight: FontWeight.w700,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? colors.onPrimaryContainer
+              : colors.onSurfaceVariant,
+          size: 23,
+        ),
+      ),
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Palette.surface,
+      fillColor: colors.surfaceContainer,
       hintStyle: textStyle(13, color: Palette.muted),
       errorStyle: textStyle(11, color: Palette.expense),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-      border: border(Palette.line),
-      enabledBorder: border(Palette.line),
-      focusedBorder: border(Palette.mint),
+      border: border(colors.outlineVariant),
+      enabledBorder: border(Colors.transparent),
+      focusedBorder: border(colors.primary, width: 2),
       errorBorder: border(Palette.expense),
-      focusedErrorBorder: border(Palette.expense),
+      focusedErrorBorder: border(Palette.expense, width: 2),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: Palette.background,
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: colors.surfaceContainer,
       showDragHandle: true,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
     ),
-    snackBarTheme: const SnackBarThemeData(
-      backgroundColor: Palette.raised,
+    dialogTheme: DialogThemeData(
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(28)),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: colors.surfaceContainerHigh,
       contentTextStyle: TextStyle(color: Palette.text),
       behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      borderRadius: BorderRadius.all(Radius.circular(8)),
+      trackGap: 4,
+      stopIndicatorRadius: 2,
+      linearTrackColor: colors.outlineVariant,
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: Palette.mint,
-        foregroundColor: Palette.base,
-        disabledBackgroundColor: Palette.raised,
+        backgroundColor: colors.primary,
+        foregroundColor: colors.onPrimary,
+        disabledBackgroundColor: colors.surfaceContainerHigh,
         disabledForegroundColor: Palette.muted,
-        shape: RoundedRectangleBorder(borderRadius: rounded),
-        minimumSize: const Size(0, 48),
+        shape: const StadiumBorder(),
+        minimumSize: const Size(0, 52),
         textStyle: textStyle(14, weight: FontWeight.w700),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: Palette.mint,
-        side: const BorderSide(color: Palette.line),
+        foregroundColor: colors.primary,
+        side: BorderSide(color: colors.outlineVariant),
         minimumSize: const Size(0, 48),
-        shape: RoundedRectangleBorder(borderRadius: rounded),
+        shape: const StadiumBorder(),
         textStyle: textStyle(14, weight: FontWeight.w700),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: Palette.mint,
+        foregroundColor: colors.primary,
         textStyle: textStyle(13, weight: FontWeight.w700),
       ),
     ),
@@ -167,7 +230,6 @@ Future<bool> confirmAction(
   return await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Palette.surface,
           title: Text(title),
           content: Text(
             message,
@@ -180,7 +242,10 @@ Future<bool> confirmAction(
             ),
             FilledButton(
               style: destructive
-                  ? FilledButton.styleFrom(backgroundColor: Palette.expense)
+                  ? FilledButton.styleFrom(
+                      backgroundColor: Palette.expense,
+                      foregroundColor: Palette.base,
+                    )
                   : null,
               onPressed: () => Navigator.pop(context, true),
               child: Text(action),
@@ -311,7 +376,11 @@ class MoneyText extends StatelessWidget {
         color: color,
         weight: weight,
         tabular: true,
-        spacing: size >= 28 ? -1 : -.15,
+        spacing: size >= 40
+            ? -1.6
+            : size >= 28
+            ? -1
+            : -.15,
       ),
     );
     if (!fit) return text;
@@ -331,7 +400,7 @@ class Glyph extends StatelessWidget {
     super.key,
     this.size = 42,
     this.iconSize = 20,
-    this.radius = 12,
+    this.radius = 15,
   });
   final IconData icon;
   final Color color;
@@ -344,7 +413,7 @@ class Glyph extends StatelessWidget {
     width: size,
     height: size,
     decoration: BoxDecoration(
-      color: color.withValues(alpha: .13),
+      color: color.withValues(alpha: .18),
       borderRadius: BorderRadius.circular(radius),
     ),
     alignment: Alignment.center,
@@ -357,36 +426,36 @@ class Surface extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.color = Palette.surface,
-    this.border = Palette.line,
-    this.radius = 17,
+    this.color,
+    this.border,
+    this.radius = 24,
     this.onTap,
   });
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final Color color;
-  final Color border;
+  final Color? color;
+  final Color? border;
   final double radius;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: color,
-    borderRadius: BorderRadius.circular(radius),
-    clipBehavior: Clip.antiAlias,
-    shape: null,
-    child: Ink(
-      decoration: BoxDecoration(
-        border: Border.all(color: border),
-        borderRadius: BorderRadius.circular(radius),
-      ),
+  Widget build(BuildContext context) {
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(radius),
+      side: border == null ? BorderSide.none : BorderSide(color: border!),
+    );
+    return Material(
+      color: color ?? Theme.of(context).colorScheme.surfaceContainer,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
+        customBorder: shape,
         onTap: onTap,
         excludeFromSemantics: onTap == null,
         child: Padding(padding: padding, child: child),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class MainHeader extends StatelessWidget {
@@ -403,75 +472,134 @@ class MainHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ledger = LedgerScope.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final brand = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.stacked_bar_chart_rounded, color: colors.primary, size: 17),
+        const SizedBox(width: 4),
+        Text(
+          'TALLY',
+          style: textStyle(
+            10,
+            spacing: 2.4,
+            color: colors.primary,
+            weight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton.filledTonal(
+          tooltip: ledger.hidden ? 'Show amounts' : 'Hide amounts',
+          iconSize: 20,
+          style: IconButton.styleFrom(
+            fixedSize: const Size.square(44),
+            backgroundColor: colors.surfaceContainerHigh,
+            foregroundColor: colors.onSurface,
+          ),
+          onPressed: () async {
+            try {
+              await ledger.togglePrivacy();
+            } catch (error) {
+              if (context.mounted) feedback(context, actionError(error));
+            }
+          },
+          icon: Icon(
+            ledger.hidden
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.filled(
+          tooltip: actionLabel,
+          style:
+              IconButton.styleFrom(
+                fixedSize: const Size.square(52),
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
+              ).copyWith(
+                shape: WidgetStateProperty.resolveWith(
+                  (states) => RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      states.contains(WidgetState.pressed) ? 28 : 18,
+                    ),
+                  ),
+                ),
+              ),
+          onPressed: onAdd,
+          icon: const Icon(Icons.add_rounded, size: 27),
+        ),
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked =
+              constraints.maxWidth < 286 ||
+              MediaQuery.textScalerOf(context).scale(32) > 38;
+          final heading = Text(
+            title,
+            maxLines: stacked ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+            style: textStyle(32, weight: FontWeight.w900, spacing: -1),
+          );
+          if (stacked) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.stacked_bar_chart_rounded,
-                      color: Palette.mint,
-                      size: 17,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'TALLY',
-                      style: textStyle(
-                        10,
-                        spacing: 2.4,
-                        color: Palette.mint,
-                        weight: FontWeight.w900,
-                      ),
-                    ),
+                    Expanded(child: brand),
+                    actions,
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textStyle(28, weight: FontWeight.w900, spacing: -.7),
-                ),
+                heading,
               ],
-            ),
-          ),
-          IconButton(
-            tooltip: ledger.hidden ? 'Show amounts' : 'Hide amounts',
-            color: Palette.secondary,
-            iconSize: 20,
-            onPressed: () async {
-              try {
-                await ledger.togglePrivacy();
-              } catch (error) {
-                if (context.mounted) feedback(context, actionError(error));
-              }
-            },
-            icon: Icon(
-              ledger.hidden
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-            ),
-          ),
-          const SizedBox(width: 6),
-          IconButton.filled(
-            tooltip: actionLabel,
-            style: IconButton.styleFrom(
-              fixedSize: const Size.square(46),
-              backgroundColor: Palette.mint,
-              foregroundColor: Palette.base,
-            ),
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded, size: 24),
-          ),
-        ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [brand, const SizedBox(height: 4), heading],
+                ),
+              ),
+              actions,
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+class SummaryHeading extends StatelessWidget {
+  const SummaryHeading(this.title, this.icon, this.color, {super.key});
+  final String title;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: Text(
+          title,
+          style: textStyle(14, color: color, weight: FontWeight.w700),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Glyph(icon, color, size: 42, iconSize: 21, radius: 17),
+    ],
+  );
 }
 
 class SectionTitle extends StatelessWidget {
@@ -488,7 +616,7 @@ class SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: textStyle(17, weight: FontWeight.w700, spacing: -.2),
+            style: textStyle(18, weight: FontWeight.w900, spacing: -.25),
           ),
         ),
         if (action != null)
@@ -530,7 +658,7 @@ class Subpage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.maybePop(context),
         ),
-        title: Text(title, style: textStyle(17, weight: FontWeight.w700)),
+        title: Text(title, style: textStyle(19, weight: FontWeight.w900)),
         actions: actions,
       ),
       body: SafeArea(
@@ -604,12 +732,18 @@ class EmptyPanel extends StatelessWidget {
     padding: const EdgeInsets.all(20),
     child: Column(
       children: [
-        Glyph(icon, Palette.mint, size: 46),
+        Glyph(
+          icon,
+          Theme.of(context).colorScheme.primary,
+          size: 54,
+          iconSize: 25,
+          radius: 20,
+        ),
         const SizedBox(height: 12),
         Text(
           title,
           textAlign: TextAlign.center,
-          style: textStyle(16, weight: FontWeight.w700),
+          style: textStyle(18, weight: FontWeight.w900),
         ),
         const SizedBox(height: 5),
         Text(
@@ -661,9 +795,9 @@ class SelectField extends StatelessWidget {
       Label(label),
       Surface(
         onTap: onTap,
-        radius: 12,
-        border: error == null ? Palette.line : Palette.expense,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 13),
+        radius: 16,
+        border: error == null ? null : Palette.expense,
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 14),
         child: Row(
           children: [
             if (leading != null) ...[leading!, const SizedBox(width: 10)],
@@ -695,13 +829,13 @@ class SheetOption<T> {
     this.label, {
     this.detail,
     this.icon,
-    this.color = Palette.mint,
+    this.color,
   });
   final T value;
   final String label;
   final String? detail;
   final IconData? icon;
-  final Color color;
+  final Color? color;
 }
 
 Future<T?> choose<T>(
@@ -734,18 +868,19 @@ Future<T?> choose<T>(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               itemBuilder: (context, index) {
                 final option = options[index];
+                final colors = Theme.of(context).colorScheme;
                 return ListTile(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   selected: selected == option.value,
-                  selectedColor: Palette.mint,
-                  selectedTileColor: Palette.greenSurface,
+                  selectedColor: colors.onPrimaryContainer,
+                  selectedTileColor: colors.primaryContainer,
                   leading: option.icon == null
                       ? null
                       : Glyph(
                           option.icon!,
-                          option.color,
+                          option.color ?? colors.primary,
                           size: 34,
                           iconSize: 17,
                         ),
@@ -756,8 +891,8 @@ Future<T?> choose<T>(
                       14,
                       weight: FontWeight.w700,
                       color: selected == option.value
-                          ? Palette.mint
-                          : Palette.text,
+                          ? colors.onPrimaryContainer
+                          : colors.onSurface,
                     ),
                   ),
                   subtitle: option.detail == null
@@ -827,7 +962,7 @@ class PrimaryFooter extends StatelessWidget {
 }
 
 class ProgressTrack extends StatelessWidget {
-  const ProgressTrack(this.fraction, {super.key, this.height = 7});
+  const ProgressTrack(this.fraction, {super.key, this.height = 10});
   final double fraction;
   final double height;
 
@@ -835,24 +970,32 @@ class ProgressTrack extends StatelessWidget {
   Widget build(BuildContext context) {
     final hidden = LedgerScope.of(context).hidden;
     final progress = fraction.clamp(0.0, 1.0);
+    final track = Theme.of(context).colorScheme.outlineVariant;
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: hidden
           ? Semantics(
               label: 'Budget progress hidden',
               child: ColoredBox(
-                color: Palette.line,
+                color: track,
                 child: SizedBox(width: double.infinity, height: height),
               ),
             )
           : TweenAnimationBuilder<double>(
               tween: Tween(end: progress),
-              duration: const Duration(milliseconds: 300),
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
               builder: (context, value, child) => LinearProgressIndicator(
                 value: value,
                 minHeight: height,
                 color: budgetColour(fraction),
-                backgroundColor: Palette.line,
+                backgroundColor: track,
+                stopIndicatorColor: budgetColour(fraction),
+                // This SDK still gates the newer track and stop indicator on this flag.
+                // ignore: deprecated_member_use
+                year2023: false,
                 semanticsLabel: 'Budget progress',
                 semanticsValue: percentage(progress),
               ),
@@ -875,38 +1018,53 @@ class SmallChip extends StatelessWidget {
   final double horizontalPadding;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Semantics(
-      button: true,
-      selected: selected,
-      child: Material(
-        color: selected ? Palette.mint : Palette.surface,
-        borderRadius: BorderRadius.circular(30),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(30),
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 36),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: 8,
-              ),
-              child: Text(
-                label,
-                style: textStyle(
-                  12,
-                  weight: FontWeight.w700,
-                  color: selected ? Palette.base : Palette.secondary,
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(selected ? 24 : 13),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        child: Material(
+          color: selected ? colors.primary : colors.surfaceContainer,
+          shape: shape,
+          animationDuration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
+          child: InkWell(
+            customBorder: shape,
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 40),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: 8,
+                ),
+                child: Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: Text(
+                    label,
+                    style: textStyle(
+                      12,
+                      weight: FontWeight.w700,
+                      color: selected
+                          ? colors.onPrimary
+                          : colors.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class FormScroll extends StatelessWidget {

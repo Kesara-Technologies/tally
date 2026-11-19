@@ -90,6 +90,7 @@ class _BackupPanelState extends State<BackupPanel> {
           child: Column(
             children: [
               _tile(
+                context,
                 action: _BackupAction.export,
                 icon: Icons.file_download_outlined,
                 title: 'Export backup',
@@ -98,6 +99,7 @@ class _BackupPanelState extends State<BackupPanel> {
               ),
               const Divider(height: 1, indent: 15, endIndent: 15),
               _tile(
+                context,
                 action: _BackupAction.restore,
                 icon: Icons.settings_backup_restore_rounded,
                 title: 'Restore backup',
@@ -111,7 +113,8 @@ class _BackupPanelState extends State<BackupPanel> {
     );
   }
 
-  Widget _tile({
+  Widget _tile(
+    BuildContext context, {
     required _BackupAction action,
     required IconData icon,
     required String title,
@@ -120,7 +123,12 @@ class _BackupPanelState extends State<BackupPanel> {
   }) => ListTile(
     enabled: _busy == null,
     onTap: onTap,
-    leading: Glyph(icon, Palette.mint, size: 34, iconSize: 18),
+    leading: Glyph(
+      icon,
+      Theme.of(context).colorScheme.primary,
+      size: 34,
+      iconSize: 18,
+    ),
     title: Text(title, style: textStyle(14, weight: FontWeight.w700)),
     subtitle: Text(subtitle, style: textStyle(12, color: Palette.secondary)),
     trailing: _busy == action

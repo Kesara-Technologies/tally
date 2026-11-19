@@ -77,38 +77,23 @@ class _TotalBalance extends StatelessWidget {
     final span = DateSpan.month(ledger.now);
     final change = ledger.combinedChange(span);
     final count = ledger.includedAccounts.length;
+    final colors = Theme.of(context).colorScheme;
     return Surface(
-      color: Palette.greenSurface,
-      border: Palette.greenLine,
-      radius: 20,
-      padding: const EdgeInsets.all(17),
+      color: Theme.of(context).colorScheme.primaryContainer,
+      radius: 30,
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Total balance',
-                  style: textStyle(
-                    13,
-                    color: Palette.mint,
-                    weight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const Glyph(
-                Icons.account_balance_wallet_outlined,
-                Palette.mint,
-                size: 33,
-                iconSize: 17,
-                radius: 9,
-              ),
-            ],
+          SummaryHeading(
+            'Total balance',
+            Icons.account_balance_wallet_outlined,
+            colors.onPrimaryContainer,
           ),
+          const SizedBox(height: 4),
           MoneyText(
             ledger.totalBalance,
-            size: 36,
+            size: 45,
             weight: FontWeight.w900,
             fit: true,
           ),
@@ -118,9 +103,9 @@ class _TotalBalance extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   color: changeColour(change).withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -159,8 +144,6 @@ class _TotalBalance extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 13),
-          const Divider(height: 1, color: Palette.greenLine),
-          const SizedBox(height: 11),
           Text(
             'Across $count ${count == 1 ? 'account' : 'accounts'}',
             style: textStyle(12, color: Palette.secondary),
@@ -177,7 +160,9 @@ class _DashedAdd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-    foregroundPainter: const _DashedBorder(),
+    foregroundPainter: _DashedBorder(
+      Theme.of(context).colorScheme.outlineVariant,
+    ),
     child: TextButton.icon(
       onPressed: onTap,
       style: TextButton.styleFrom(
@@ -191,7 +176,9 @@ class _DashedAdd extends StatelessWidget {
 }
 
 class _DashedBorder extends CustomPainter {
-  const _DashedBorder();
+  const _DashedBorder(this.color);
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -203,7 +190,7 @@ class _DashedBorder extends CustomPainter {
         ),
       );
     final paint = Paint()
-      ..color = Palette.line
+      ..color = color
       ..strokeWidth = 1
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
@@ -218,7 +205,8 @@ class _DashedBorder extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DashedBorder oldDelegate) => false;
+  bool shouldRepaint(covariant _DashedBorder oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class ManageAccounts extends StatefulWidget {
@@ -565,8 +553,8 @@ class _AccountDetailsState extends State<AccountDetails> {
       child: PageScroll(
         children: [
           Surface(
-            color: Palette.greenSurface,
-            border: Palette.greenLine,
+            color: Theme.of(context).colorScheme.primaryContainer,
+            radius: 30,
             child: Column(
               children: [
                 Glyph(
@@ -794,8 +782,7 @@ class _AdjustmentPageState extends State<_AdjustmentPage> {
         child: FormScroll(
           children: [
             Surface(
-              color: Palette.greenSurface,
-              border: Palette.greenLine,
+              color: Theme.of(context).colorScheme.primaryContainer,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

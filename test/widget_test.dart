@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:budget_app/data/ledger.dart';
 import 'package:budget_app/data/ledger_snapshot.dart';
@@ -9,8 +8,11 @@ import 'package:budget_app/data/models.dart';
 import 'package:budget_app/data/storage.dart';
 import 'package:budget_app/main.dart';
 import 'package:budget_app/ui/budgets.dart';
+import 'package:budget_app/ui/design.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class MemoryStorage implements LedgerStorage {
@@ -135,6 +137,109 @@ Future<void> tap(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  testWidgets('transaction filter labels are vertically centred', (
+    tester,
+  ) async {
+    await launch(tester, Ledger(populatedStorage(), clock: () => testNow));
+    for (final label in ['All', 'Expenses', 'Income', 'Transfers']) {
+      final chip = find.widgetWithText(SmallChip, label);
+      final text = find.descendant(of: chip, matching: find.text(label));
+      final paragraph = tester.renderObject<RenderParagraph>(text);
+      final line = paragraph
+          .getBoxesForSelection(
+            TextSelection(baseOffset: 0, extentOffset: label.length),
+          )
+          .single;
+      final centre = paragraph.localToGlobal(line.toRect().center).dy;
+      expect(centre, closeTo(tester.getCenter(chip).dy, 1), reason: label);
+    }
+  });
+
+  testWidgets('Android system colours update the app theme on resume', (
+    tester,
+  ) async {
+    const channel = MethodChannel('tally/system-colours');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    var seed = const Color(0xFF9D4056);
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      expect(call.method, 'getAccent');
+      return seed.toARGB32();
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    await launch(tester, Ledger(populatedStorage(), clock: () => testNow));
+    Color primary() =>
+        Theme.of(tester.element(find.byType(NavigationBar)))
+            .colorScheme
+            .primary;
+    Color expected() => ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.dark,
+    ).primary;
+    final previous = primary();
+    expect(previous, expected());
+
+    seed = const Color(0xFF37658B);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(primary(), expected());
+    expect(primary(), isNot(previous));
+    final chip = find.widgetWithText(SmallChip, 'All');
+    final material = find.descendant(of: chip, matching: find.byType(Material));
+    expect(tester.widget<Material>(material).color, expected());
+  });
+
+  testWidgets(
+    'analysis month picker changes the month and animates its figures',
+    (tester) async {
+      await launch(tester, Ledger(populatedStorage(), clock: () => testNow));
+      await tap(tester, find.text('Analysis'));
+      await tap(tester, find.text('November 2026'));
+      expect(find.text('Select month'), findsOneWidget);
+
+      Finder monthButton(String label) => find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.widgetWithText(TextButton, label),
+      );
+      expect(tester.widget<TextButton>(monthButton('Dec')).onPressed, isNull);
+      await tap(tester, find.byTooltip('Previous year'));
+      expect(find.text('2025'), findsOneWidget);
+      expect(
+        tester.widget<TextButton>(monthButton('Dec')).onPressed,
+        isNotNull,
+      );
+      await tap(tester, find.byTooltip('Next year'));
+      await tap(tester, monthButton('Sep'));
+      expect(find.text('September 2026'), findsOneWidget);
+      expect(find.text('£1,550.00'), findsWidgets);
+
+      double opacity() => tester
+          .widget<SliverFadeTransition>(find.byType(SliverFadeTransition))
+          .opacity
+          .value;
+      await tester.tap(find.byTooltip('Next month'));
+      await tester.pump();
+      expect(opacity(), lessThan(1));
+      await tester.pumpAndSettle();
+      expect(opacity(), 1);
+      expect(find.text('October 2026'), findsOneWidget);
+
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pump();
+      await tester.tap(find.byTooltip('Next month'));
+      await tester.pump();
+      expect(opacity(), 1);
+      await tester.pumpAndSettle();
+      expect(find.text('November 2026'), findsOneWidget);
+    },
+  );
+
   testWidgets('three linked tabs support item search and persistent privacy', (
     tester,
   ) async {

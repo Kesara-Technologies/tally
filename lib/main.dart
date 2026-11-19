@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -22,11 +24,41 @@ class TallyApp extends StatefulWidget {
   State<TallyApp> createState() => _TallyAppState();
 }
 
-class _TallyAppState extends State<TallyApp> {
+class _TallyAppState extends State<TallyApp> with WidgetsBindingObserver {
+  static const _systemColours = MethodChannel('tally/system-colours');
   late Future<void> _loading = widget.ledger.load();
+  Color? _systemAccent;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshSystemColours();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshSystemColours();
+  }
+
+  Future<void> _refreshSystemColours() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      final argb = await _systemColours.invokeMethod<int>('getAccent');
+      final accent = argb == null ? null : Color(argb);
+      if (mounted && accent != _systemAccent) {
+        setState(() => _systemAccent = accent);
+      }
+    } on MissingPluginException {
+      return;
+    } on PlatformException {
+      return;
+    }
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.ledger.dispose();
     super.dispose();
   }
@@ -37,7 +69,7 @@ class _TallyAppState extends State<TallyApp> {
     child: MaterialApp(
       title: 'Tally',
       debugShowCheckedModeBanner: false,
-      theme: tallyTheme(),
+      theme: tallyTheme(seedColor: _systemAccent),
       locale: const Locale('en', 'GB'),
       supportedLocales: const [Locale('en', 'GB')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -48,7 +80,9 @@ class _TallyAppState extends State<TallyApp> {
           child: AnnotatedRegion<SystemUiOverlayStyle>(
             value: SystemUiOverlayStyle.light.copyWith(
               statusBarColor: Colors.transparent,
-              systemNavigationBarColor: Palette.base,
+              systemNavigationBarColor: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerLowest,
               systemNavigationBarContrastEnforced: false,
             ),
             child: child!,
@@ -106,14 +140,32 @@ class TallyHome extends StatefulWidget {
 
 class _TallyHomeState extends State<TallyHome>
     with SingleTickerProviderStateMixin {
-  static const _tabs = [
-    (label: 'Transactions', icon: Icons.receipt_long_outlined),
-    (label: 'Accounts', icon: Icons.account_balance_wallet_outlined),
-    (label: 'Analysis', icon: Icons.bar_chart_rounded),
+  static const _destinations = [
+    NavigationDestination(
+      icon: Icon(Icons.receipt_long_outlined),
+      selectedIcon: Icon(Icons.receipt_long_rounded),
+      label: 'Transactions',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.account_balance_wallet_outlined),
+      selectedIcon: Icon(Icons.account_balance_wallet_rounded),
+      label: 'Accounts',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.bar_chart_rounded),
+      label: 'Analysis',
+    ),
   ];
+  static const _tabSpring = SpringDescription(
+    mass: 1,
+    stiffness: 440,
+    damping: 36,
+  );
+
   int _selected = 0;
-  late final _tabFade = _tabAnimation.drive(
-    Tween<double>(begin: .86, end: 1).chain(CurveTween(curve: Curves.easeOut)),
+  late final _tabAnimation = AnimationController.unbounded(
+    vsync: this,
+    value: 1,
   );
 
   @override
@@ -122,18 +174,15 @@ class _TallyHomeState extends State<TallyHome>
     super.dispose();
   }
 
-  late final _tabAnimation = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 160),
-    value: 1,
-  );
-
   void _selectTab(int index) {
     if (_selected == index) return;
     FocusScope.of(context).unfocus();
     setState(() => _selected = index);
-    if (!MediaQuery.disableAnimationsOf(context)) {
-      _tabAnimation.forward(from: 0);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _tabAnimation.value = 1;
+    } else {
+      _tabAnimation.value = 0;
+      _tabAnimation.animateWith(SpringSimulation(_tabSpring, 0, 1, 0));
     }
   }
 
@@ -144,8 +193,18 @@ class _TallyHomeState extends State<TallyHome>
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 590),
-          child: FadeTransition(
-            opacity: _tabFade,
+          child: AnimatedBuilder(
+            animation: _tabAnimation,
+            builder: (context, child) {
+              final progress = _tabAnimation.value;
+              return Transform.translate(
+                offset: Offset(0, (1 - progress) * 8),
+                child: Opacity(
+                  opacity: (.82 + progress * .18).clamp(0, 1),
+                  child: child,
+                ),
+              );
+            },
             child: IndexedStack(
               index: _selected,
               children: [
@@ -168,93 +227,21 @@ class _TallyHomeState extends State<TallyHome>
       ),
     ),
     bottomNavigationBar: Material(
-      color: Palette.base,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Palette.line)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Center(
-            heightFactor: 1,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 590),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 5, 12, 3),
-                child: Row(
-                  children: [
-                    for (var index = 0; index < _tabs.length; index++)
-                      Expanded(
-                        child: _TabButton(
-                          label: _tabs[index].label,
-                          icon: _tabs[index].icon,
-                          selected: _selected == index,
-                          onTap: () => _selectTab(index),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 590),
+          child: NavigationBar(
+            selectedIndex: _selected,
+            onDestinationSelected: _selectTab,
+            animationDuration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
+            destinations: _destinations,
           ),
         ),
       ),
     ),
   );
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? Palette.mint : Palette.muted;
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      excludeSemantics: true,
-      onTap: onTap,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 170),
-                width: 52,
-                height: 28,
-                curve: Curves.easeOut,
-                decoration: BoxDecoration(
-                  color: selected ? Palette.greenSurface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textStyle(11, color: color, weight: FontWeight.w700),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

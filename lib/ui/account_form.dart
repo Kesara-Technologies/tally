@@ -187,18 +187,18 @@ class _AccountFormState extends State<AccountForm> {
               const SizedBox(height: 15),
             ],
             const Label('Currency'),
-            const Surface(
+            Surface(
               radius: 12,
-              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               child: Row(
                 children: [
                   Icon(
                     Icons.currency_pound_rounded,
                     size: 18,
-                    color: Palette.mint,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                  SizedBox(width: 8),
-                  Expanded(
+                  const SizedBox(width: 8),
+                  const Expanded(
                     child: Text(
                       'British pound (GBP)',
                       style: TextStyle(fontSize: 14),
@@ -230,12 +230,16 @@ class _AccountFormState extends State<AccountForm> {
                           height: 44,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Palette.surface,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainer,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: _colour == value
                                   ? Color(value)
-                                  : Palette.line,
+                                  : Theme.of(context)
+                                        .colorScheme
+                                        .outlineVariant,
                             ),
                           ),
                           child: Container(
@@ -283,20 +287,24 @@ class _AccountFormState extends State<AccountForm> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: _icon == icon
-                                ? Palette.greenSurface
-                                : Palette.surface,
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                : Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainer,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: _icon == icon
-                                  ? Palette.mint
-                                  : Palette.line,
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                        .colorScheme
+                                        .outlineVariant,
                             ),
                           ),
                           child: Icon(
                             accountSymbol(icon),
                             size: 20,
                             color: _icon == icon
-                                ? Palette.mint
+                                ? Theme.of(context).colorScheme.primary
                                 : Palette.secondary,
                           ),
                         ),
@@ -390,7 +398,7 @@ class AccountCard extends StatelessWidget {
   Widget build(BuildContext context) => Surface(
     onTap: onTap,
     padding: const EdgeInsets.all(13),
-    radius: 16,
+    radius: 22,
     child: Row(
       children: [
         Glyph(

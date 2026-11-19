@@ -4,17 +4,19 @@ Tally is an Android-first Flutter app for tracking personal finances in pounds s
 
 ## Install on Android
 
-1. Download [`tally-0.1.apk`](https://github.com/erman47/tally/releases/download/v0.1/tally-0.1.apk) from the GitHub release. Sign in with an account that can access this private repository.
+1. Download the APK from the [latest Tally release](https://github.com/Kesara-Technologies/tally/releases/latest).
 2. Copy the APK to your phone if you downloaded it elsewhere, then open it and follow Android's installation prompts.
 3. Open **Tally**. In **Accounts**, use **+** to create your first account and enter its opening balance.
 
-The APK supports Android 7.0 (API 24) and later on ARM64, 32-bit ARM, and x86-64 devices. It is a release build signed with a development key for direct installation. GitHub release `v0.1` uses Android app version `1.0.5` (build `6`).
+The APK supports Android 7.0 (API 24) and later on ARM64, 32-bit ARM, and x86-64 devices. It is a release build signed with a development key for direct installation.
 
 ## Use Tally
 
 - **Transactions** lets you add expenses, income, and transfers, or search and filter your history. Itemise purchases when you want parts of one expense to count toward different spending categories. To credit income to an account without counting it in the monthly cash-flow summary or chart, turn off **Include in net cash flow**.
 - **Accounts** shows balances, monthly activity, and account history. Open **Manage** and drag the handles to reorder accounts. Active accounts appear above archived ones. Use **Adjust account balance** to record a correction with a reason.
-- **Analysis** breaks down spending by category and month, shows spending trends, and tracks weekly, monthly, and yearly budget goals. Scroll to **Backup & restore** to export or restore the ledger.
+- **Analysis** breaks down spending by category and month, shows spending trends, and tracks weekly, monthly, and yearly budget goals. Tap the month label to jump to another month or year. Scroll to **Backup & restore** to export or restore the ledger.
+
+On Android 12 and later, Tally follows the system's wallpaper-based colours. Tally's mint palette is the fallback.
 
 ## Back up your data
 

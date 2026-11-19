@@ -6,7 +6,7 @@ import '../data/models.dart';
 import 'design.dart';
 
 class Sparkline extends StatelessWidget {
-  const Sparkline(this.values, {super.key, this.color = Palette.mint});
+  const Sparkline(this.values, {super.key, required this.color});
   final List<int> values;
   final Color color;
 
@@ -44,7 +44,10 @@ class BalanceChart extends StatelessWidget {
               children: [
                 Expanded(
                   child: CustomPaint(
-                    painter: _LinePainter(values, color: Palette.mint),
+                    painter: _LinePainter(
+                      values,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -100,6 +103,7 @@ class _LinePainter extends CustomPainter {
     final low = values.reduce(min);
     final high = values.reduce(max);
     final line = Path();
+    var endpoint = Offset.zero;
     for (var index = 0; index < values.length; index++) {
       final x =
           margin +
@@ -107,16 +111,14 @@ class _LinePainter extends CustomPainter {
       final y =
           margin +
           height * (high == low ? .5 : (high - values[index]) / (high - low));
+      endpoint = Offset(x, y);
       if (index == 0) {
         line.moveTo(x, y);
       } else {
         line.lineTo(x, y);
       }
     }
-    final grid = Paint()
-      ..color = (compact ? Palette.greenLine : Palette.line).withValues(
-        alpha: .7,
-      );
+    final grid = Paint()..color = color.withValues(alpha: compact ? .19 : .24);
     for (final fraction in [.0, .5, 1.0]) {
       final y = margin + height * fraction;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
@@ -139,10 +141,11 @@ class _LinePainter extends CustomPainter {
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = compact ? 1.8 : 2.4
+        ..strokeWidth = compact ? 2.3 : 2.7
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
+    canvas.drawCircle(endpoint, compact ? 2.8 : 3.4, Paint()..color = color);
   }
 
   @override
@@ -193,7 +196,12 @@ class SpendingDonut extends StatelessWidget {
                         }
                       }
                     },
-              child: CustomPaint(painter: _DonutPainter(hidden ? {} : slices)),
+              child: CustomPaint(
+                painter: _DonutPainter(
+                  hidden ? {} : slices,
+                  Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
             ),
           ),
           IgnorePointer(
@@ -230,8 +238,9 @@ class SpendingDonut extends StatelessWidget {
 }
 
 class _DonutPainter extends CustomPainter {
-  const _DonutPainter(this.slices);
+  const _DonutPainter(this.slices, this.track);
   final Map<Category, int> slices;
+  final Color track;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -240,7 +249,7 @@ class _DonutPainter extends CustomPainter {
     final pen = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke;
-    canvas.drawOval(rect, pen..color = Palette.line);
+    canvas.drawOval(rect, pen..color = track);
     final total = slices.values.fold(0, (sum, amount) => sum + amount);
     var start = -pi / 2;
     for (final slice in slices.entries) {
@@ -259,7 +268,7 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) =>
-      oldDelegate.slices != slices;
+      oldDelegate.slices != slices || oldDelegate.track != track;
 }
 
 class SpendingBars extends StatefulWidget {
@@ -267,11 +276,11 @@ class SpendingBars extends StatefulWidget {
     super.key,
     required this.labels,
     required this.values,
-    this.color = Palette.mint,
+    this.color,
   });
   final List<String> labels;
   final List<int> values;
-  final Color color;
+  final Color? color;
 
   @override
   State<SpendingBars> createState() => _SpendingBarsState();
@@ -289,6 +298,7 @@ class _SpendingBarsState extends State<SpendingBars> {
   @override
   Widget build(BuildContext context) {
     if (LedgerScope.of(context).hidden) return const _ChartHidden();
+    final color = widget.color ?? Theme.of(context).colorScheme.primary;
     final selected = _selected ?? widget.values.length - 1;
     final peak = max(1, widget.values.reduce(max));
     return Column(
@@ -312,14 +322,7 @@ class _SpendingBarsState extends State<SpendingBars> {
               Positioned.fill(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(
-                    4,
-                    (_) => const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Palette.line,
-                    ),
-                  ),
+                  children: List.generate(4, (_) => const Divider(height: 1)),
                 ),
               ),
               Positioned.fill(
@@ -350,7 +353,7 @@ class _SpendingBarsState extends State<SpendingBars> {
                                           109 * widget.values[index] / peak,
                                         ),
                                   decoration: BoxDecoration(
-                                    color: widget.color.withValues(
+                                    color: color.withValues(
                                       alpha: index == selected ? 1 : .42,
                                     ),
                                     borderRadius: const BorderRadius.vertical(
@@ -383,7 +386,7 @@ class _SpendingBarsState extends State<SpendingBars> {
                   maxLines: 1,
                   style: textStyle(
                     10,
-                    color: index == selected ? widget.color : Palette.secondary,
+                    color: index == selected ? color : Palette.secondary,
                   ),
                 ),
               ),

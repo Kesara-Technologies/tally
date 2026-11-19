@@ -270,6 +270,7 @@ class _EntryFormState extends State<EntryForm> {
   Widget build(BuildContext context) {
     final ledger = LedgerScope.of(context);
     final color = typeColour(_type);
+    final colors = Theme.of(context).colorScheme;
     final editing = widget.existing != null;
     final amountStyle = textStyle(
       35,
@@ -325,9 +326,12 @@ class _EntryFormState extends State<EntryForm> {
         child: FormScroll(
           children: [
             Surface(
-              color: Palette.greenSurface,
-              border: amountError == null ? Palette.greenLine : Palette.expense,
-              radius: 18,
+              color: Color.alphaBlend(
+                color.withValues(alpha: .13),
+                colors.surfaceContainer,
+              ),
+              border: amountError == null ? null : Palette.expense,
+              radius: 30,
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
               child: Column(
                 children: [
@@ -389,8 +393,8 @@ class _EntryFormState extends State<EntryForm> {
                               filled: false,
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
-                              focusedBorder: const UnderlineInputBorder(
-                                borderSide: BorderSide(color: Palette.mint),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: colors.primary),
                               ),
                               focusedErrorBorder: const UnderlineInputBorder(
                                 borderSide: BorderSide(color: Palette.expense),
@@ -595,9 +599,9 @@ class _EntryFormState extends State<EntryForm> {
                 padding: const EdgeInsets.fromLTRB(13, 5, 13, 5),
                 child: Row(
                   children: [
-                    const Glyph(
+                    Glyph(
                       Icons.list_alt_outlined,
-                      Palette.mint,
+                      colors.primary,
                       size: 35,
                       iconSize: 18,
                     ),
@@ -689,7 +693,7 @@ class _EntryFormState extends State<EntryForm> {
                                 ),
                                 border: itemOverflow
                                     ? Palette.expense
-                                    : Palette.line,
+                                    : colors.outlineVariant,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -723,8 +727,7 @@ class _EntryFormState extends State<EntryForm> {
             ],
             const SizedBox(height: 16),
             Surface(
-              color: Palette.greenSurface,
-              border: Palette.greenLine,
+              color: colors.primaryContainer,
               padding: const EdgeInsets.all(12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,52 +804,80 @@ class _EntryTypeSelector extends StatelessWidget {
   final ValueChanged<EntryType>? onChanged;
 
   @override
-  Widget build(BuildContext context) => Surface(
-    radius: 13,
-    padding: const EdgeInsets.all(4),
-    child: Row(
-      children: [
-        for (final candidate in [
-          EntryType.expense,
-          EntryType.income,
-          EntryType.transfer,
-        ])
-          Expanded(
-            child: Semantics(
-              button: true,
-              selected: candidate == type,
-              child: Material(
-                color: candidate == type
-                    ? Palette.greenSurface
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(9),
-                child: InkWell(
-                  onTap: onChanged == null ? null : () => onChanged!(candidate),
-                  borderRadius: BorderRadius.circular(9),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 2,
-                    ),
+  Widget build(BuildContext context) {
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 230);
+    return Surface(
+      radius: 24,
+      padding: const EdgeInsets.all(5),
+      child: Row(
+        spacing: 4,
+        children: [
+          for (final candidate in [
+            EntryType.expense,
+            EntryType.income,
+            EntryType.transfer,
+          ])
+            Expanded(child: _option(context, candidate, duration)),
+        ],
+      ),
+    );
+  }
+
+  Widget _option(BuildContext context, EntryType candidate, Duration duration) {
+    final colors = Theme.of(context).colorScheme;
+    final selected = candidate == type;
+    final tone = typeColour(candidate);
+    final color = selected ? tone : Palette.secondary;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(selected ? 22 : 12),
+    );
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected
+            ? Color.alphaBlend(
+                tone.withValues(alpha: .13),
+                colors.surfaceContainerHigh,
+              )
+            : colors.surfaceContainer,
+        shape: shape,
+        animationDuration: duration,
+        child: InkWell(
+          customBorder: shape,
+          onTap: onChanged == null ? null : () => onChanged!(candidate),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 46),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(typeIcon(candidate), size: 15, color: color),
+                  const SizedBox(width: 4),
+                  Flexible(
                     child: Text(
                       candidate.label,
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: textStyle(
                         13,
-                        color: candidate == type
-                            ? Palette.mint
-                            : Palette.secondary,
+                        color: color,
                         weight: FontWeight.w700,
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
-      ],
-    ),
-  );
+        ),
+      ),
+    );
+  }
 }
 
 class _AccountFieldIcon extends StatelessWidget {

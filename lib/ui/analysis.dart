@@ -14,15 +14,57 @@ class AnalysisView extends StatefulWidget {
   State<AnalysisView> createState() => _AnalysisViewState();
 }
 
-class _AnalysisViewState extends State<AnalysisView> {
+const _monthAnimationDuration = Duration(milliseconds: 240);
+
+class _AnalysisViewState extends State<AnalysisView>
+    with SingleTickerProviderStateMixin {
   DateTime? _selectedMonth;
+  late final _transition = AnimationController(
+    vsync: this,
+    duration: _monthAnimationDuration,
+    value: 1,
+  );
+  late final _monthOpacity = _transition.drive(
+    Tween<double>(
+      begin: .55,
+      end: 1,
+    ).chain(CurveTween(curve: Curves.easeOutCubic)),
+  );
+
+  @override
+  void dispose() {
+    _transition.dispose();
+    super.dispose();
+  }
+
+  void _changeMonth(DateTime previous, DateTime next) {
+    if (previous == next) return;
+    setState(() => _selectedMonth = next);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _transition.value = 1;
+    } else {
+      _transition.forward(from: 0);
+    }
+  }
+
+  Future<void> _pickMonth(DateTime month, DateTime current) async {
+    final selected = await showModalBottomSheet<DateTime>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 480),
+      builder: (context) => _MonthPicker(selected: month, latest: current),
+    );
+    if (mounted && selected != null) _changeMonth(month, selected);
+  }
 
   @override
   Widget build(BuildContext context) {
     final ledger = LedgerScope.of(context);
-    final current = DateTime(ledger.now.year, ledger.now.month);
+    final now = ledger.now;
+    final current = DateTime(now.year, now.month);
     final month = _selectedMonth ?? current;
-    final reference = periodReference(month, ledger.now);
+    final reference = periodReference(month, now);
     final span = DateSpan.month(month);
     final breakdown = ledger.breakdown(span);
     final amount = ledger.spending(span);
@@ -35,6 +77,90 @@ class _AnalysisViewState extends State<AnalysisView> {
       context,
       CategoryAnalysis(category: category, month: month),
     );
+    final monthContent = <Widget>[
+      _MonthlySpending(
+        amount: amount,
+        budget: overall,
+        used: overall == null ? 0 : ledger.budgetUsage(overall, reference),
+        onCreate: add,
+      ),
+      const SizedBox(height: 21),
+      const SectionTitle('Spending breakdown'),
+      if (breakdown.isEmpty)
+        const EmptyPanel(
+          icon: Icons.donut_large_rounded,
+          title: 'No spending data yet',
+          message:
+              'Your spending insights will appear as you add transactions.',
+        )
+      else
+        _BreakdownCard(
+          breakdown: breakdown,
+          total: amount,
+          onSelect: categoryDetails,
+        ),
+      const SizedBox(height: 21),
+      SectionTitle(
+        'Budget goals',
+        action: 'See all',
+        onAction: () =>
+            openPage<void>(context, BudgetManagement(reference: reference)),
+      ),
+      if (ledger.budgets.isEmpty)
+        EmptyPanel(
+          icon: Icons.track_changes_rounded,
+          title: 'No budgets created',
+          message: 'Set a spending goal to stay on top of your finances.',
+          action: 'Create Budget',
+          onAction: add,
+        )
+      else if (categoryBudgets.isEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Surface(
+            child: Row(
+              children: [
+                Icon(
+                  Icons.category_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 21,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Set a limit for a specific spending category.',
+                    style: textStyle(13, color: Palette.secondary),
+                  ),
+                ),
+                TextButton(onPressed: add, child: const Text('Create goal')),
+              ],
+            ),
+          ),
+        )
+      else
+        for (final budget in categoryBudgets.take(3))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 9),
+            child: BudgetCard(
+              budget: budget,
+              used: ledger.budgetUsage(budget, reference),
+              onTap: () => openPage<void>(
+                context,
+                CategoryAnalysis(
+                  category: budget.category!,
+                  month: month,
+                  budgetId: budget.id,
+                ),
+              ),
+            ),
+          ),
+      const SizedBox(height: 18),
+      const SectionTitle('Spending trends'),
+      _Trends(month: month),
+      const SizedBox(height: 21),
+      const SectionTitle('Insights'),
+      _Insights(month: month, breakdown: breakdown, reference: reference),
+    ];
     return Column(
       children: [
         MainHeader(
@@ -43,120 +169,41 @@ class _AnalysisViewState extends State<AnalysisView> {
           onAdd: add,
         ),
         Expanded(
-          child: PageScroll(
-            storageKey: const PageStorageKey('analysis'),
-            top: 0,
-            children: [
-              _MonthControl(
-                month: month,
-                previous: () => setState(
-                  () => _selectedMonth = DateTime(month.year, month.month - 1),
-                ),
-                next: !month.isBefore(current)
-                    ? null
-                    : () => setState(
-                        () => _selectedMonth = DateTime(
-                          month.year,
-                          month.month + 1,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 13),
-              _MonthlySpending(
-                amount: amount,
-                budget: overall,
-                used: overall == null
-                    ? 0
-                    : ledger.budgetUsage(overall, reference),
-                onCreate: add,
-              ),
-              const SizedBox(height: 21),
-              const SectionTitle('Spending breakdown'),
-              if (breakdown.isEmpty)
-                const EmptyPanel(
-                  icon: Icons.donut_large_rounded,
-                  title: 'No spending data yet',
-                  message: 'Your spending insights will appear as you add transactions.',
-                )
-              else
-                _BreakdownCard(
-                  breakdown: breakdown,
-                  total: amount,
-                  onSelect: categoryDetails,
-                ),
-              const SizedBox(height: 21),
-              SectionTitle(
-                'Budget goals',
-                action: 'See all',
-                onAction: () => openPage<void>(
-                  context,
-                  BudgetManagement(reference: reference),
-                ),
-              ),
-              if (ledger.budgets.isEmpty)
-                EmptyPanel(
-                  icon: Icons.track_changes_rounded,
-                  title: 'No budgets created',
-                  message:
-                      'Set a spending goal to stay on top of your finances.',
-                  action: 'Create Budget',
-                  onAction: add,
-                )
-              else if (categoryBudgets.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Surface(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.category_outlined,
-                          color: Palette.mint,
-                          size: 21,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Set a limit for a specific spending category.',
-                            style: textStyle(13, color: Palette.secondary),
+          child: CustomScrollView(
+            key: const PageStorageKey('analysis'),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 13),
+                sliver: SliverToBoxAdapter(
+                  child: _MonthControl(
+                    month: month,
+                    onSelect: () => _pickMonth(month, current),
+                    previous: month.year == 1 && month.month == 1
+                        ? null
+                        : () => _changeMonth(
+                            month,
+                            DateTime(month.year, month.month - 1),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: add,
-                          child: const Text('Create goal'),
-                        ),
-                      ],
-                    ),
+                    next: month.isBefore(current)
+                        ? () => _changeMonth(
+                            month,
+                            DateTime(month.year, month.month + 1),
+                          )
+                        : null,
                   ),
-                )
-              else
-                for (final budget in categoryBudgets.take(3))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
-                    child: BudgetCard(
-                      budget: budget,
-                      used: ledger.budgetUsage(budget, reference),
-                      onTap: () => openPage<void>(
-                        context,
-                        CategoryAnalysis(
-                          category: budget.category!,
-                          month: month,
-                          budgetId: budget.id,
-                        ),
-                      ),
-                    ),
-                  ),
-              const SizedBox(height: 18),
-              const SectionTitle('Spending trends'),
-              _Trends(month: month),
-              const SizedBox(height: 21),
-              const SectionTitle('Insights'),
-              _Insights(
-                month: month,
-                breakdown: breakdown,
-                reference: reference,
+                ),
               ),
-              const SizedBox(height: 21),
-              const BackupPanel(),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverFadeTransition(
+                  opacity: _monthOpacity,
+                  sliver: SliverList.list(children: monthContent),
+                ),
+              ),
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(20, 21, 20, 28),
+                sliver: SliverToBoxAdapter(child: BackupPanel()),
+              ),
             ],
           ),
         ),
@@ -166,52 +213,204 @@ class _AnalysisViewState extends State<AnalysisView> {
 }
 
 class _MonthControl extends StatelessWidget {
-  const _MonthControl({required this.month, required this.previous, this.next});
+  const _MonthControl({
+    required this.month,
+    required this.onSelect,
+    required this.previous,
+    required this.next,
+  });
   final DateTime month;
-  final VoidCallback previous;
+  final VoidCallback onSelect;
+  final VoidCallback? previous;
   final VoidCallback? next;
 
   @override
-  Widget build(BuildContext context) => Surface(
-    radius: 13,
-    padding: const EdgeInsets.symmetric(horizontal: 3),
-    child: Row(
-      children: [
-        IconButton(
-          tooltip: 'Previous month',
-          onPressed: previous,
-          icon: const Icon(Icons.chevron_left_rounded),
-        ),
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.calendar_today_outlined,
-                color: Palette.mint,
-                size: 15,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  monthLabel(month),
-                  textAlign: TextAlign.center,
-                  style: textStyle(14, weight: FontWeight.w700),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Surface(
+      radius: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Previous month',
+            onPressed: previous,
+            icon: const Icon(Icons.chevron_left_rounded),
+          ),
+          Expanded(
+            child: Tooltip(
+              message: 'Select month',
+              child: TextButton(
+                onPressed: onSelect,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      color: colors.primary,
+                      size: 15,
+                    ),
+                    const SizedBox(width: 7),
+                    Flexible(
+                      child: AnimatedSwitcher(
+                        duration: MediaQuery.disableAnimationsOf(context)
+                            ? Duration.zero
+                            : _monthAnimationDuration,
+                        child: Text(
+                          monthLabel(month),
+                          key: ValueKey(month),
+                          textAlign: TextAlign.center,
+                          style: textStyle(
+                            14,
+                            weight: FontWeight.w700,
+                            color: colors.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Icon(
+                      Icons.expand_more_rounded,
+                      color: colors.primary,
+                      size: 18,
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
+          IconButton(
+            tooltip: 'Next month',
+            onPressed: next,
+            icon: const Icon(Icons.chevron_right_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthPicker extends StatefulWidget {
+  const _MonthPicker({required this.selected, required this.latest});
+  final DateTime selected;
+  final DateTime latest;
+
+  @override
+  State<_MonthPicker> createState() => _MonthPickerState();
+}
+
+class _MonthPickerState extends State<_MonthPicker> {
+  late int _year = widget.selected.year;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Select month',
+                    style: textStyle(20, weight: FontWeight.w900),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Close month selector',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            Surface(
+              color: colors.surface,
+              radius: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Previous year',
+                    onPressed: _year > 1 ? () => setState(() => _year--) : null,
+                    icon: const Icon(Icons.chevron_left_rounded),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '$_year',
+                      textAlign: TextAlign.center,
+                      style: textStyle(
+                        17,
+                        weight: FontWeight.w900,
+                        tabular: true,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Next year',
+                    onPressed: _year < widget.latest.year
+                        ? () => setState(() => _year++)
+                        : null,
+                    icon: const Icon(Icons.chevron_right_rounded),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) => Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (var month = 1; month <= 12; month++)
+                    SizedBox(
+                      width: (constraints.maxWidth - 16) / 3,
+                      child: _monthButton(DateTime(_year, month), colors),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
-        IconButton(
-          tooltip: 'Next month',
-          onPressed: next,
-          icon: const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
+
+  Widget _monthButton(DateTime date, ColorScheme colors) {
+    final selected = date == widget.selected;
+    return Semantics(
+      selected: selected,
+      child: TextButton(
+        style: TextButton.styleFrom(
+          backgroundColor: selected
+              ? colors.primaryContainer
+              : colors.surfaceContainerHigh,
+          foregroundColor: selected
+              ? colors.onPrimaryContainer
+              : colors.onSurface,
+          disabledBackgroundColor: colors.surface,
+          disabledForegroundColor: colors.onSurfaceVariant.withValues(
+            alpha: .48,
+          ),
+          minimumSize: const Size(0, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
         ),
-      ],
-    ),
-  );
+        onPressed: date.isAfter(widget.latest)
+            ? null
+            : () => Navigator.pop(context, date),
+        child: Text(shortMonth(date), semanticsLabel: monthLabel(date)),
+      ),
+    );
+  }
 }
 
 class _MonthlySpending extends StatelessWidget {
@@ -230,36 +429,21 @@ class _MonthlySpending extends StatelessWidget {
   Widget build(BuildContext context) {
     final goal = budget;
     final samePeriod = goal?.period == BudgetPeriod.monthly;
+    final colors = Theme.of(context).colorScheme;
     return Surface(
-      color: Palette.greenSurface,
-      border: Palette.greenLine,
-      radius: 20,
-      padding: const EdgeInsets.all(16),
+      color: colors.tertiaryContainer,
+      radius: 30,
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Monthly spending',
-                  style: textStyle(
-                    13,
-                    color: Palette.mint,
-                    weight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const Glyph(
-                Icons.track_changes_rounded,
-                Palette.mint,
-                size: 31,
-                iconSize: 17,
-                radius: 9,
-              ),
-            ],
+          SummaryHeading(
+            'Monthly spending',
+            Icons.track_changes_rounded,
+            colors.onTertiaryContainer,
           ),
-          MoneyText(amount, size: 35, weight: FontWeight.w900, fit: true),
+          const SizedBox(height: 4),
+          MoneyText(amount, size: 44, weight: FontWeight.w900, fit: true),
           if (goal == null) ...[
             const SizedBox(height: 6),
             Text(
@@ -692,8 +876,7 @@ class _CategoryAnalysisState extends State<CategoryAnalysis> {
       child: PageScroll(
         children: [
           Surface(
-            color: Palette.greenSurface,
-            border: Palette.greenLine,
+            color: Theme.of(context).colorScheme.tertiaryContainer,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -707,7 +890,9 @@ class _CategoryAnalysisState extends State<CategoryAnalysis> {
                             'Total spent',
                             style: textStyle(
                               13,
-                              color: Palette.mint,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onTertiaryContainer,
                               weight: FontWeight.w700,
                             ),
                           ),
@@ -740,7 +925,7 @@ class _CategoryAnalysisState extends State<CategoryAnalysis> {
                     child: const Text('Set a category budget'),
                   )
                 else ...[
-                  const Divider(height: 1, color: Palette.greenLine),
+                  const Divider(height: 1),
                   const SizedBox(height: 6),
                   DetailLine(
                     '${budget.period.label} budget',
