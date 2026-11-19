@@ -2,6 +2,16 @@
 
 Tally is an Android-first Flutter app for tracking personal finances in pounds sterling. It keeps a local ledger of accounts, transactions, and spending goals. A new installation starts with an empty ledger.
 
+## Screenshots
+
+<p>
+  <img src="docs/screenshots/transactions.png" width="240" alt="Transactions tab showing monthly cash flow and recent activity">
+  <img src="docs/screenshots/accounts.png" width="240" alt="Accounts tab showing the combined balance and individual accounts">
+  <img src="docs/screenshots/analysis.png" width="240" alt="Analysis tab showing monthly budget usage and a spending breakdown">
+</p>
+
+Screenshots captured on Android with sample data.
+
 ## Install on Android
 
 1. Download the APK from the [latest Tally release](https://github.com/Kesara-Technologies/tally/releases/latest).
