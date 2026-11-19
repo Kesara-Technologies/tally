@@ -34,6 +34,10 @@ Tally stores financial data on your device. Tap **Analysis → Backup & restore 
 
 To move to a new device or recover a ledger, select **Restore backup** and choose the JSON file. Tally validates the file and shows a confirmation before replacing the current ledger.
 
+## AI disclosure
+
+OpenAI Codex assisted with writing Tally's app code, tests, and documentation. The app calculates balances, budget progress, and spending insights on your device using your ledger.
+
 ## Build and test
 
 The Android build has been verified with Flutter 3.47.9 and Dart 3.13.7. Set up the Android SDK and either start an Android emulator or connect a phone with USB debugging enabled.
